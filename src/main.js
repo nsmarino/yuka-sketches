@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import * as YUKA from 'yuka'
 import { renderer, scene } from './core/renderer'
 import { fpsGraph, gui } from './core/gui'
 import camera from './core/camera'
@@ -36,19 +37,31 @@ const sphere = new THREE.Mesh(
   new THREE.SphereGeometry(1, 32, 32),
   sphereMaterial,
 )
-
 sphere.position.set(0, 2, 0)
 sphere.castShadow = true
 scene.add(sphere)
 
+const vehicleGeometry = new THREE.ConeGeometry( 5, 20, 32 );
+vehicleGeometry.rotateX(Math.PI * 0.5);
+const vehicleMaterial = new THREE.MeshNormalMaterial();
+const vehicleMesh = new THREE.Mesh(vehicleGeometry, vehicleMaterial);
+vehicleMesh.matrixAutoUpdate = false;
+scene.add(vehicleMesh);
+
+const vehicle = new YUKA.Vehicle();
+vehicle.setRenderComponent(vehicleMesh, sync);
+function sync(entity, renderComponent) {
+    renderComponent.matrix.copy(entity.worldMatrix);
+}
+
+
 const DirectionalLightFolder = gui.addFolder({
   title: 'Directional Light',
 })
-
 Object.keys(directionalLight.position).forEach(key => {
   DirectionalLightFolder.addInput(
     directionalLight.position,
-    key as keyof THREE.Vector3,
+    key,
     {
       min: -100,
       max: 100,
@@ -61,7 +74,6 @@ const plane = new THREE.Mesh(
   new THREE.PlaneGeometry(10, 10, 10, 10),
   new THREE.MeshToonMaterial({ color: '#444' }),
 )
-
 plane.rotation.set(-Math.PI / 2, 0, 0)
 plane.receiveShadow = true
 scene.add(plane)
