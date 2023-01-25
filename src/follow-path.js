@@ -39,9 +39,10 @@ const sphere = new THREE.Mesh(
 )
 sphere.position.set(0, 2, 0)
 sphere.castShadow = true
-scene.add(sphere)
+// scene.add(sphere)
 
-const vehicleGeometry = new THREE.ConeGeometry( 5, 20, 32 );
+// Set up mesh ("render component" for Yuka Vehicle)
+const vehicleGeometry = new THREE.ConeGeometry( 0.1, 0.5, 8 );
 vehicleGeometry.rotateX(Math.PI * 0.5);
 const vehicleMaterial = new THREE.MeshNormalMaterial();
 const vehicleMesh = new THREE.Mesh(vehicleGeometry, vehicleMaterial);
@@ -54,6 +55,48 @@ function sync(entity, renderComponent) {
     renderComponent.matrix.copy(entity.worldMatrix);
 }
 
+// ADD PATH FOR VEHICLE TO FOLLOW
+const path = new YUKA.Path();
+path.add( new YUKA.Vector3(-4, 0, 4));
+path.add( new YUKA.Vector3(-6, 0, 0));
+path.add( new YUKA.Vector3(-4, 0, -4));
+path.add( new YUKA.Vector3(0, 0, 0));
+path.add( new YUKA.Vector3(4, 0, -4));
+path.add( new YUKA.Vector3(6, 0, 0));
+path.add( new YUKA.Vector3(4, 0, 4));
+path.add( new YUKA.Vector3(0, 0, 6));
+
+path.loop = true;
+console.log("Path", path)
+
+vehicle.position.copy(path.current());
+vehicle.maxSpeed = 2
+
+const followPathBehavior = new YUKA.FollowPathBehavior(path, 0.5);
+vehicle.steering.add(followPathBehavior);
+
+const onPathBehavior = new YUKA.OnPathBehavior(path);
+onPathBehavior.radius = 0.2;
+vehicle.steering.add(onPathBehavior);
+
+const entityManager = new YUKA.EntityManager();
+entityManager.add(vehicle);
+
+const position = [];
+for(let i = 0; i < path._waypoints.length; i++) {
+    const waypoint = path._waypoints[i];
+    position.push(waypoint.x, waypoint.y, waypoint.z);
+}
+
+const lineGeometry = new THREE.BufferGeometry();
+// itemSize = 3 because there are 3 values (components) per vertex
+lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
+
+const lineMaterial = new THREE.LineBasicMaterial({color: 0xFF0000});
+const lines = new THREE.LineLoop(lineGeometry, lineMaterial);
+scene.add(lines);
+
+const time = new YUKA.Time();
 
 const DirectionalLightFolder = gui.addFolder({
   title: 'Directional Light',
@@ -70,14 +113,6 @@ Object.keys(directionalLight.position).forEach(key => {
   )
 })
 
-const plane = new THREE.Mesh(
-  new THREE.PlaneGeometry(10, 10, 10, 10),
-  new THREE.MeshToonMaterial({ color: '#444' }),
-)
-plane.rotation.set(-Math.PI / 2, 0, 0)
-plane.receiveShadow = true
-scene.add(plane)
-
 const clock = new THREE.Clock()
 
 const loop = () => {
@@ -88,6 +123,10 @@ const loop = () => {
   fpsGraph.begin()
 
   controls.update()
+
+  const delta = time.update().getDelta();
+  entityManager.update(delta);
+
   renderer.render(scene, camera)
 
   fpsGraph.end()
