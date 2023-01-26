@@ -43,6 +43,7 @@
     "vite-plugin-glsl": "^1.0.1"
   },
   "dependencies": {
+    "gsap": "^3.11.4",
     "yuka": "^0.7.8"
   }
 }

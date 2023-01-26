@@ -9,10 +9,28 @@
       body {
         margin: 0;
         padding: 0;
+        background-image: url("zonk.png");
+        background-size: cover;
+        background-position: 50% 145%;
       }
+      #skybox {
+        pointer-events: none;
+        position: fixed;
+        z-index: -1;
+        background-image: linear-gradient(to top, rgba(0, 250, 225, 0), rgba(0,0,0,0.0)), url("ocean.jpeg");
+        -webkit-mask-image: -webkit-gradient(linear, left top, left bottom, 
+    from(rgba(0,0,0,1)), to(rgba(0,0,0,0)));
+        background-repeat:no-repeat;
+        width: 100vw;
+        height: 100vh;
+        background-size: cover;
+        transform: rotate(180deg);
+      }
+      
     </style>
   </head>
   <body>
+    <div id="skybox"></div>
     <script type="module" src="/src/_working.js"></script>
   </body>
 </html>

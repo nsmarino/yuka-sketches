@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as YUKA from 'yuka';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader';
+import gsap from "gsap"
 
 const renderer = new THREE.WebGLRenderer({antialias: true});
 
@@ -10,7 +11,7 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 
-renderer.setClearColor(0xFFF);
+renderer.setClearAlpha(0x000);
 
 const camera = new THREE.PerspectiveCamera(
     45,
@@ -19,7 +20,7 @@ const camera = new THREE.PerspectiveCamera(
     1000
 );
 
-camera.position.set(0, 10, 4);
+camera.position.set(0,10,0);
 camera.lookAt(scene.position);
 
 const ambientLight = new THREE.AmbientLight(0x333333);
@@ -27,13 +28,6 @@ scene.add(ambientLight);
 
 const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
 scene.add(directionalLight);
-
-// const vehicleGeometry = new THREE.ConeBufferGeometry(0.1, 0.5, 8);
-// vehicleGeometry.rotateX(Math.PI * 0.5);
-// const vehicleMaterial = new THREE.MeshNormalMaterial();
-// const vehicleMesh = new THREE.Mesh(vehicleGeometry, vehicleMaterial);
-// vehicleMesh.matrixAutoUpdate = false;
-// scene.add(vehicleMesh);
 
 const vehicle = new YUKA.Vehicle();
 
@@ -55,8 +49,8 @@ const group = new THREE.Group();
 //     scene.add(group);
 //     vehicle.setRenderComponent(model, sync);
 // });
-const targetGeometry = new THREE.SphereGeometry(2);
-const targetMaterial = new THREE.MeshPhongMaterial({color: 0xFFEA00});
+const targetGeometry = new THREE.SphereGeometry(3);
+const targetMaterial = new THREE.MeshStandardMaterial({color: 0xFFEAFF});
 const targetMesh = new THREE.Mesh(targetGeometry, targetMaterial);
 
 const model = targetMesh;
@@ -65,22 +59,30 @@ group.add(model);
 scene.add(group);
 vehicle.setRenderComponent(model, sync);
 
-// const targetGeometry = new THREE.SphereGeometry(0.1);
-// const targetMaterial = new THREE.MeshPhongMaterial({color: 0xFFEA00});
-// const targetMesh = new THREE.Mesh(targetGeometry, targetMaterial);
-// targetMesh.matrixAutoUpdate = false;
-// scene.add(targetMesh);
+const cursorGeometry = new THREE.BoxGeometry(0.33,0.33,0.33);
+const cursorMaterial = new THREE.MeshPhongMaterial({color: 0xFFEA00});
+const cursorMesh = new THREE.Mesh(cursorGeometry, cursorMaterial);
+cursorMesh.matrixAutoUpdate = false;
+scene.add(cursorMesh);
+
+const bgMesh = new THREE.Mesh(targetGeometry,targetMaterial)
+bgMesh.position.y=(0)
+bgMesh.position.z=(5)
+bgMesh.position.x=(-5)
+scene.add(bgMesh)
 
 const target = new YUKA.GameEntity();
-//target.setRenderComponent(targetMesh, sync);
+target.setRenderComponent(cursorMesh, sync);
 entityManager.add(target);
 
-const arriveBehavior = new YUKA.ArriveBehavior(target.position, 3, 0.5);
+const arriveBehavior = new YUKA.ArriveBehavior(target.position, 0.18,0);
 vehicle.steering.add(arriveBehavior);
 
 vehicle.position.set(-3, 0, -3);
 
-vehicle.maxSpeed = 10;
+vehicle.maxSpeed = 500;
+vehicle.maxForce = 500
+vehicle.mass = 0.1
 
 const mousePosition = new THREE.Vector2();
 
@@ -89,7 +91,7 @@ window.addEventListener('mousemove', function(e) {
     mousePosition.y = -(e.clientY / this.window.innerHeight) * 2 + 1;
 });
 
-const planeGeo = new THREE.PlaneGeometry(25, 25);
+const planeGeo = new THREE.PlaneGeometry(2500, 2500);
 const planeMat = new THREE.MeshBasicMaterial({visible: false});
 const planeMesh = new THREE.Mesh(planeGeo, planeMat);
 planeMesh.rotation.x = -0.5 * Math.PI;
@@ -97,13 +99,23 @@ scene.add(planeMesh);
 planeMesh.name = 'plane';
 
 const raycaster = new THREE.Raycaster();
+let tempV = new THREE.Vector3()
 
-window.addEventListener('click', function() {
+window.addEventListener('click', function(e) {
     raycaster.setFromCamera(mousePosition, camera);
     const intersects = raycaster.intersectObjects(scene.children);
+    console.log(intersects)
     for(let i = 0; i < intersects.length; i++) {
         if(intersects[i].object.name === 'plane')
             target.position.set(intersects[i].point.x, 0, intersects[i].point.z);
+           if (intersects[i].point.x > (camera.position.x)) {
+                console.log("Over")
+                gsap.to(camera.position, {x: intersects[i].point.x, duration: 2.2})
+                camera.updateProjectionMatrix()
+            } else if (e.clientX < (window.innerWidth * 0.2)) {
+                gsap.to(camera.position, {x: intersects[i].point.x, duration: 2})
+                camera.updateProjectionMatrix()
+            }
     }
 });
 
