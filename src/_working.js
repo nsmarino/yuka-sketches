@@ -2,10 +2,20 @@ import * as THREE from 'three';
 import * as YUKA from 'yuka';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader';
 import gsap from "gsap"
+import forestMp3 from "/forest.mp3"
+
+const musicHandler = document.createElement("audio")
+musicHandler.src = forestMp3
+musicHandler.volume = 0.02
+
+document.addEventListener("click", () => {
+    musicHandler.play()
+})
+
 
 const renderer = new THREE.WebGLRenderer({antialias: true});
 
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(1000, 600);
 
 document.body.appendChild(renderer.domElement);
 
@@ -15,7 +25,7 @@ renderer.setClearAlpha(0x000);
 
 const camera = new THREE.PerspectiveCamera(
     45,
-    window.innerWidth / window.innerHeight,
+    1000 / 600,
     0.1,
     1000
 );
@@ -50,7 +60,7 @@ const group = new THREE.Group();
 //     vehicle.setRenderComponent(model, sync);
 // });
 const targetGeometry = new THREE.SphereGeometry(3);
-const targetMaterial = new THREE.MeshStandardMaterial({color: 0xFFEAFF});
+const targetMaterial = new THREE.MeshStandardMaterial({color: 0xFFA500});
 const targetMesh = new THREE.Mesh(targetGeometry, targetMaterial);
 
 const model = targetMesh;
@@ -65,11 +75,31 @@ const cursorMesh = new THREE.Mesh(cursorGeometry, cursorMaterial);
 cursorMesh.matrixAutoUpdate = false;
 scene.add(cursorMesh);
 
-const bgMesh = new THREE.Mesh(targetGeometry,targetMaterial)
+// Spheres at bottom of scene
+const bgMaterial = new THREE.MeshPhongMaterial({color: 0xAA1720})
+const bgMesh = new THREE.Mesh(targetGeometry,bgMaterial)
 bgMesh.position.y=(0)
 bgMesh.position.z=(5)
 bgMesh.position.x=(-5)
-scene.add(bgMesh)
+for (let i = 0; i < 10; i++) {
+    const newMesh = bgMesh.clone()
+    newMesh.position.x = i * 5
+    scene.add(newMesh)
+}
+
+const blockGeometry = new THREE.BoxGeometry(2,0.5,1);
+const blockMaterial = new THREE.MeshPhongMaterial({color: 0xAA1720})
+const blockMesh = new THREE.Mesh(blockGeometry,blockMaterial)
+blockMesh.position.y=(0)
+blockMesh.position.z=(0)
+blockMesh.position.x=(0)
+const randomBlockPos= gsap.utils.random(4, -6, 2, true);
+for (let i = 0; i < 10; i++) {
+    const newMesh = blockMesh.clone()
+    newMesh.position.x = i * 5
+    newMesh.position.z = randomBlockPos();
+    scene.add(newMesh)
+}
 
 const target = new YUKA.GameEntity();
 target.setRenderComponent(cursorMesh, sync);
@@ -86,9 +116,13 @@ vehicle.mass = 0.1
 
 const mousePosition = new THREE.Vector2();
 
-window.addEventListener('mousemove', function(e) {
-    mousePosition.x = (e.clientX / this.window.innerWidth) * 2 - 1;
-    mousePosition.y = -(e.clientY / this.window.innerHeight) * 2 + 1;
+const canvas = document.querySelector("canvas")
+canvas.addEventListener('mousemove', function(e) {
+    var rect = e.target.getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    var y = e.clientY - rect.top;
+    mousePosition.x = (x / rect.width) * 2 - 1
+    mousePosition.y = -(y / rect.height) * 2 + 1
 });
 
 const planeGeo = new THREE.PlaneGeometry(2500, 2500);
@@ -99,22 +133,33 @@ scene.add(planeMesh);
 planeMesh.name = 'plane';
 
 const raycaster = new THREE.Raycaster();
-let tempV = new THREE.Vector3()
+const cameraShift = 12
 
-window.addEventListener('click', function(e) {
+canvas.addEventListener('click', function(e) {
     raycaster.setFromCamera(mousePosition, camera);
     const intersects = raycaster.intersectObjects(scene.children);
-    console.log(intersects)
     for(let i = 0; i < intersects.length; i++) {
         if(intersects[i].object.name === 'plane')
+            if (intersects[i].point.x > 50 || intersects[i].point.x < -5) return
             target.position.set(intersects[i].point.x, 0, intersects[i].point.z);
-           if (intersects[i].point.x > (camera.position.x)) {
-                console.log("Over")
-                gsap.to(camera.position, {x: intersects[i].point.x, duration: 2.2})
+            var rect = e.target.getBoundingClientRect();
+            var x = e.clientX - rect.left;
+            
+            // MOVE CAMERA FORWARD
+           if (x > (rect.width*0.9)) {
+                gsap.to(camera.position, {x: camera.position.x + cameraShift, duration: 1.4})
                 camera.updateProjectionMatrix()
-            } else if (e.clientX < (window.innerWidth * 0.2)) {
-                gsap.to(camera.position, {x: intersects[i].point.x, duration: 2})
+
+                // parallax bg
+                gsap.to(".bg", {backgroundPositionX: "+=2%", duration: 1.4})
+
+            // MOVE CAMERA BACKWARD
+            } else if (x < (rect.width*0.1)) {
+                gsap.to(camera.position, {x: camera.position.x - cameraShift, duration: 2})
                 camera.updateProjectionMatrix()
+
+                // parallax bg
+                gsap.to(".bg", {backgroundPositionX: "-=2%", duration: 1.4})
             }
     }
 });
@@ -138,8 +183,8 @@ function animate(t) {
 
 renderer.setAnimationLoop(animate);
 
-window.addEventListener('resize', function() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
+// window.addEventListener('resize', function() {
+//     camera.aspect = window.innerWidth / window.innerHeight;
+//     camera.updateProjectionMatrix();
+//     renderer.setSize(window.innerWidth, window.innerHeight);
+// });
